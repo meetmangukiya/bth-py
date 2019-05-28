@@ -2,3 +2,5 @@
 **/__pycache__/
 bth.db
 bth.egg-info
+build/
+dist/

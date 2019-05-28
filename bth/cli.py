@@ -4,7 +4,7 @@ import datetime
 
 import click
 
-from db import db
+from .db import db
 
 
 @click.group()
