@@ -1,13 +1,17 @@
 import datetime
+import os
 import sqlite3
 
 
 class DB:
     def __init__(self):
+        self._dirpath = os.path.expanduser(os.path.join('~', '.bth'))
+        os.makedirs(self._dirpath, exist_ok=True)
+        self._path = os.path.join(self._dirpath, 'bth.db')
         self.create_tables()
 
     def connection(self):
-        conn = sqlite3.connect('bth.db', detect_types=sqlite3.PARSE_DECLTYPES)
+        conn = sqlite3.connect(self._path, detect_types=sqlite3.PARSE_DECLTYPES)
         return conn
 
     def create_tables(self):
