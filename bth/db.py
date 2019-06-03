@@ -2,125 +2,119 @@ import datetime
 import os
 import sqlite3
 
+import sqlalchemy
+from sqlalchemy import and_, create_engine, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+
+Base = declarative_base()
+
+class Project(Base):
+    __tablename__ = 'projects'
+
+    name = Column(String)
+    id = Column(Integer, autoincrement=True, primary_key=True)
+
+
+class Session(Base):
+    __tablename__ = 'sessions'
+
+    start = Column(DateTime, nullable=False)
+    end = Column(DateTime)
+    pid = Column(Integer, ForeignKey(Project.id))
+    sid = Column(Integer, autoincrement=True, primary_key=True)
+
+
+class CurrentlyActive(Base):
+    __tablename__ = 'currently_active'
+
+    pid = Column(Integer, ForeignKey(Project.id))
+    sid = Column(Integer, ForeignKey(Session.sid), primary_key=True)
+
+
 
 class DB:
     def __init__(self):
         self._dirpath = os.path.expanduser(os.path.join('~', '.bth'))
         os.makedirs(self._dirpath, exist_ok=True)
         self._path = os.path.join(self._dirpath, 'bth.db')
-        self.create_tables()
-
-    def connection(self):
-        conn = sqlite3.connect(self._path, detect_types=sqlite3.PARSE_DECLTYPES)
-        return conn
-
-    def create_tables(self):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            stmts = [
-                ('CREATE TABLE IF NOT EXISTS projects('
-                 '   name    TEXT,'
-                 '   id      INTEGER PRIMARY KEY AUTOINCREMENT)'),
-                ('CREATE TABLE IF NOT EXISTS sessions('
-                 '   start   DATETIME,'
-                 '   end     DATETIME,'
-                 '   pid     INTEGER,'
-                 '   sid     INTEGER PRIMARY KEY AUTOINCREMENT,'
-                 '   FOREIGN KEY(pid) REFERENCES projects(id))'),
-                ('CREATE TABLE IF NOT EXISTS currently_active('
-                 '   pid      INTEGER,'
-                 '   sid      INTEGER,'
-                 '   FOREIGN KEY(sid) REFERENCES sessions(sid),'
-                 '   FOREIGN KEY(pid) REFERENCES projects(id))')
-            ]
-            for stmt in stmts:
-                curs.execute(stmt)
-            conn.commit()
+        self._engine = create_engine(f'sqlite:///{self._path}')
+        Base.metadata.create_all(self._engine)
+        self._Session = sessionmaker(bind=self._engine)
+        self._session = self._Session()
 
     def add_project(self, name):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            curs.execute('INSERT INTO projects(name) VALUES(?)', (name, ))
-            conn.commit()
+        project = Project(name=name)
+        self._session.add(project)
+        self._session.commit()
 
     def add_session(self, start, pid, end=None):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            curs.execute('INSERT INTO sessions(start, pid, end) VALUES(?, ?, ?)', (start, pid,
-                end))
-            conn.commit()
-            return curs.execute('SELECT sid FROM sessions WHERE start=? AND pid=?',
-                    (start, pid)).fetchone()[0]
+        session = Session(start=start, pid=pid)
+        self._session.add(session)
+        self._session.commit()
+        session = self._session.query(Session).filter(and_(Session.start == start,
+            Session.pid == pid)).first()
+        return session.sid
 
     def end_session(self, sid):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            curs.execute('UPDATE sessions SET end=? WHERE sid=?',
-                    (datetime.datetime.now(), sid))
+        session = self._session.query(Session).filter(Session.sid == sid).first()
+        session.end = datetime.datetime.now()
+        self._session.commit()
 
     def get_session(self, sid=None, pid=None):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            single = False
-            if sid:
-                single = True
-                curs.execute('SELECT start, end, pid, sid FROM sessions WHERE sid=?',
-                             (sid, ))
-            elif pid:
-                curs.execute('SELECT start, end, pid, sid FROM sessions WHERE pid=? ORDER BY start',
-                             (pid, ))
-            res = []
-            for start, end, pid, sid in curs:
-                if isinstance(start, str):
-                    start = datetime.datetime.fromisoformat(start)
-                if isinstance(end, str):
-                    end = datetime.datetime.fromisoformat(end)
-                res.append((start, end, pid, sid))
-            if single:
-                return res[0]
-            else:
-                return res
+        single = False
+
+        if sid:
+            single = True
+            query = self._session.query(Session).filter(Session.sid == sid)
+        if pid:
+            query = self._session.query(Session).filter(Session.pid == pid).order_by(Session.pid)
+
+        res = []
+
+        for session in query:
+            res.append((session.start, session.end, session.pid, session.sid))
+
+        if single:
+            return res[0]
+        else:
+            return res
 
     def get_projects(self):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            curs.execute('SELECT name, id FROM projects')
-            return curs.fetchall()
+        return [(project.name, project.id) for project in self._session.query(Project)]
 
     def get_currently_active(self):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            return curs.execute('SELECT pid, sid FROM currently_active').fetchone()
+        active = self._session.query(CurrentlyActive).first()
+        if active:
+            return active.pid, active.sid
 
     def get_project(self, idd):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            return curs.execute('SELECT name, id FROM projects WHERE id=?',
-                    (idd, )).fetchone()
+        project = self._session.query(Project).filter(Project.id == idd).first()
+        return project.name, project.id
 
     def set_currently_active(self, pid, sid):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            curs.execute('INSERT INTO currently_active(pid, sid) VALUES(?,?)', (pid, sid))
-            conn.commit()
+        active = CurrentlyActive(pid=pid, sid=sid)
+        self._session.add(active)
+        self._session.commit()
 
     def start(self, idd):
-        with self.connection() as conn:
-            curs = conn.cursor()
-            if self.get_currently_active():
-                return False
-            sid = self.add_session(datetime.datetime.now(), idd)
-            self.set_currently_active(idd, sid)
-            return True
+        if self.get_currently_active():
+            return False
+        sid = self.add_session(datetime.datetime.now(), idd)
+        self.set_currently_active(idd, sid)
+        return True
 
     def stop(self):
         (pid, sid) = self.get_currently_active() or (None, None)
         if pid:
-            with self.connection() as conn:
-                curs = conn.cursor()
-                curs.execute('DELETE FROM currently_active')
-                conn.commit()
+            self._session.query(CurrentlyActive).delete()
+            self._session.commit()
+
             self.end_session(sid)
         return pid, sid
+
+    def close(self):
+        self._session.close()
 
 db = DB()

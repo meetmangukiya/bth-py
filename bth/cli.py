@@ -84,3 +84,4 @@ def show(idd):
 
 if __name__ == '__main__':
     cli()
+    db.close()

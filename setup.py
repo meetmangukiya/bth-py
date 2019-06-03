@@ -23,6 +23,7 @@ VERSION = '0.1.1'
 # What packages are required for this module to be executed?
 REQUIRED = [
     'click',
+    'sqlalchemy',
 ]
 
 # What packages are optional?
