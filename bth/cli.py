@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+from datetime import timedelta
 
 import click
 
@@ -78,9 +79,11 @@ def show(idd):
     """
     print('SID\tStart\t\t\t\tEnd')
     sessions = db.get_session(pid=idd)
+    time = timedelta()
     for start, end, pid, sid in sessions:
+        time += (end if end else datetime.datetime.now()) - start
         print(f'{sid}\t{start}\t{end}')
-
+    print(f'Total time: {time}')
 
 if __name__ == '__main__':
     cli()
