@@ -39,7 +39,8 @@ def ls():
         print(f'{idd}\t{name}')
 
 @command
-def status():
+@click.option('--forever', is_flag=True)
+def status(forever):
     """
     Shows the status, whether working or not? If working, how long has the
     current sessiono been.
@@ -49,7 +50,10 @@ def status():
         name, pid = db.get_project(pid)
         start, end, pid, sid = db.get_session(sid)
         print(f'Working on project {pid} - "{name}"')
-        print(f'Current session duration: {datetime.datetime.now() - start}')
+        while True:
+            print(f'\rCurrent session duration: {datetime.datetime.now() - start}', end='')
+            if not forever:
+                break
     else:
         print('Not working on anything as of now.')
 
