@@ -24,6 +24,7 @@ VERSION = '0.1.1'
 REQUIRED = [
     'click',
     'sqlalchemy',
+    'alembic',
 ]
 
 # What packages are optional?

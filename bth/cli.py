@@ -2,7 +2,9 @@
 
 import datetime
 from datetime import timedelta
+import os
 
+import alembic.config
 import click
 
 from .db import db
@@ -84,6 +86,19 @@ def show(idd):
         time += (end if end else datetime.datetime.now()) - start
         print(f'{sid}\t{start}\t{end}')
     print(f'Total time: {time}')
+
+@command
+def migrate():
+    """
+    Perform SQL migrations.
+    """
+    os.chdir(os.path.join(os.path.dirname(__file__)))
+    args = [
+        '--raiseerr',
+        'upgrade', 'head',
+    ]
+    alembic.config.main(argv=args)
+
 
 if __name__ == '__main__':
     cli()
