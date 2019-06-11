@@ -8,8 +8,8 @@ produce some proof for your employer.
 
 1. Install from source
     `pip install -e .`
-2. Install from PyPI
-    `pip install bth`
+<!--2. Install from PyPI-->
+<!--`pip install bth`-->
 
 ## Usage
 
