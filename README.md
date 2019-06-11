@@ -29,3 +29,13 @@ Commands:
   status   Shows the status, whether working or not? If working, how long...
   stop     Stop current work session.
 ```
+
+| Use case | Command |
+| -------- | ------- |
+| Create a new project | `bth new "project name"` |
+| List all the projects | `bth ls` |
+| Start a work session for a given project | `bth start <pid>`. You can check pid of a project from the output of `bth ls`|
+| Stop current work session | `bth stop` |
+| See all the work sessions of a given project | `bth show <pid>`|
+| See the current status, any active projects? how long? | `bth status` |
+| Perform a SQL migration after update | `bth migrate` |
