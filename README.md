@@ -20,11 +20,12 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  ls      Shows the list of all current projects.
-  new     Creates a new project.
-  show    Show work sessions of a particular project.
-  start   Start a new work session on a given project.
-  status  Shows the status, whether working or not? If working, how long
-          has...
-  stop    Stop current work session.
+  ls       Shows the list of all current projects.
+  mark     Mark a particular session as paid or unpaid.
+  migrate  Perform SQL migrations.
+  new      Creates a new project.
+  show     Show work sessions of a particular project.
+  start    Start a new work session on a given project.
+  status   Shows the status, whether working or not? If working, how long...
+  stop     Stop current work session.
 ```
