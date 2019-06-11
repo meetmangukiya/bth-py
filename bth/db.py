@@ -3,7 +3,7 @@ import os
 import sqlite3
 
 import sqlalchemy
-from sqlalchemy import and_, create_engine, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import and_, create_engine, Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -24,6 +24,7 @@ class Session(Base):
     end = Column(DateTime)
     pid = Column(Integer, ForeignKey(Project.id))
     sid = Column(Integer, autoincrement=True, primary_key=True)
+    paid = Column(Boolean, nullable=False, default=False)
 
 
 class CurrentlyActive(Base):
@@ -74,7 +75,8 @@ class DB:
         res = []
 
         for session in query:
-            res.append((session.start, session.end, session.pid, session.sid))
+            res.append((session.start, session.end, session.pid, session.sid,
+                session.paid))
 
         if single:
             return res[0]
@@ -96,6 +98,17 @@ class DB:
     def set_currently_active(self, pid, sid):
         active = CurrentlyActive(pid=pid, sid=sid)
         self._session.add(active)
+        self._session.commit()
+
+    def set_session_paid_status(self, paid, sid=None, pid=None):
+        if sid:
+            sessions = self._session.query(Session).filter(Session.sid ==
+                    sid)
+        if pid:
+            sessions = self._session.query(Session).filter(Session.pid == pid)
+        for sess in sessions:
+            sess.paid = paid
+            self._session.add(sess)
         self._session.commit()
 
     def start(self, idd):

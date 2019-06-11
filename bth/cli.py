@@ -48,7 +48,7 @@ def status(forever):
     pid, sid = db.get_currently_active() or (None, None)
     if pid:
         name, pid = db.get_project(pid)
-        start, end, pid, sid = db.get_session(sid)
+        start, end, pid, sid, paid = db.get_session(sid)
         print(f'Working on project {pid} - "{name}"')
         while True:
             print(f'\rCurrent session duration: {datetime.datetime.now() - start}', end='')
@@ -83,12 +83,13 @@ def show(idd):
     """
     Show work sessions of a particular project.
     """
-    print('SID\tStart\t\t\t\tEnd')
+    print('SID\tStart\t\t\t\tEnd\t\t\t\tPaid\tDuration')
     sessions = db.get_session(pid=idd)
     time = timedelta()
-    for start, end, pid, sid in sessions:
-        time += (end if end else datetime.datetime.now()) - start
-        print(f'{sid}\t{start}\t{end}')
+    for start, end, pid, sid, paid in sessions:
+        curr_time = (end if end else datetime.datetime.now()) - start
+        time += curr_time
+        print(f'{sid}\t{start}\t{end}\t{paid}\t{curr_time}')
     print(f'Total time: {time}')
 
 @command
@@ -102,6 +103,20 @@ def migrate():
         'upgrade', 'head',
     ]
     alembic.config.main(argv=args)
+
+@command
+@click.option('--sid', 'id', flag_value='sid', default=True)
+@click.option('--pid', 'id', flag_value='pid')
+@click.argument('idd')
+@click.option('--paid/--unpaid', required=True)
+def mark(id, idd, paid):
+    """
+    Mark a particular session as paid or unpaid.
+    """
+    if id == 'sid':
+        db.set_session_paid_status(sid=idd, paid=paid)
+    elif id == 'pid':
+        db.set_session_paid_status(pid=idd, paid=paid)
 
 
 if __name__ == '__main__':
